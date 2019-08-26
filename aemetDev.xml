@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<aemetDev xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="aemetOpenData.xsd">
+  <weatherStationsInOpenData>
+	<path>C:\Users\solis\Documents\DB\aemet\aemetOD</path>
+    <db>aemetOD.db</db>
+	<table>estaciones</table>
+  </weatherStationsInOpenData>
+  <weatherStationsInIdee>
+	<path>C:\Users\solis\Documents\DB\aemet\gis</path>
+	<db>AEMET.sqlite</db>
+	<table>automaticas</table>
+	<table>completas</table>
+	<table>pluviometricas</table>
+	<table>termometricas</table>
+	<tableNew>stations</tableNew>
+	<columnNoCopy>ogc_fid</columnNoCopy>
+	<columnNoCopy>ogc_fid0</columnNoCopy>
+	<primaryKeyColumn>indicativo</primaryKeyColumn>
+  </weatherStationsInIdee>
+</aemetDev>
