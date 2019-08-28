@@ -16,5 +16,6 @@
 	<columnNoCopy>ogc_fid</columnNoCopy>
 	<columnNoCopy>ogc_fid0</columnNoCopy>
 	<primaryKeyColumn>indicativo</primaryKeyColumn>
+	<writeScript>True</writeScript>
   </weatherStationsInIdee>
 </aemetDev>

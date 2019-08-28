@@ -11,6 +11,7 @@ from xml.etree.ElementTree import Element as xmlElement
 
 # fichero de parámetros del programa
 FILEPARAM = 'aemetDev.xml'
+FILE_INSERT_IF_NOT_EXISTS = 'estaciones.sql'
 
 # Mensajes que aparecen más de una vez
 MSG_NO_OPTION = 'Salir'
@@ -19,6 +20,7 @@ MSGWRITE1OPTION = 'Sitúe el cursor al final de la línea ' + \
                   'y teclee un número entre los mostrados: '
 MSG_END_OK = 'Proceso terminado correctamente'
 MSGREVISARPARAM = f'-Puedes revisar ahora el contendo de {FILEPARAM}-'
+
 
 def menuMain():
     """
@@ -93,7 +95,7 @@ def filterColumns(columns: OrderedDict,
     return OrderedDict(newColumns)
 
 
-def createTableIfNotExists(element: xmlElement):
+def createTableIfNotExists(element: xmlElement) -> str:
     """
     crea una tabla if not exists a partir de la información del elemento
         weatherStationsInIdee
@@ -107,7 +109,7 @@ def createTableIfNotExists(element: xmlElement):
     columns = tableDefinitionGet(element)
 
     columnsNoCopy = [element1.text.strip()
-                    for element1 in element.findall('columnNoCopy')]
+                     for element1 in element.findall('columnNoCopy')]
 
     columns = filterColumns(columns, columnsNoCopy)
 
@@ -133,9 +135,10 @@ def createTableIfNotExists(element: xmlElement):
     cur = con.cursor()
     cur.executescript(stm1)
     con.close()
+    return stm1
 
 
-def tableDefinitionGet(element: xmlElement) -> OrderedDict:
+def tableDefinitionGet(element: xmlElement, table: str = None) -> OrderedDict:
     """
     Crea un dicccionario en que las keys son los nombres de los campos
         y el valor su tipo
@@ -145,7 +148,8 @@ def tableDefinitionGet(element: xmlElement) -> OrderedDict:
     path = pathFromXML(element, 'path')
     db = element.find('db').text.strip()
     db = os.path.join(path, db)
-    table = element.find('table').text.strip()
+    if table is None:
+        table = element.find('table').text.strip()
 
     con = sqlite3.connect(db)
     cur = con.cursor()
@@ -157,9 +161,61 @@ def tableDefinitionGet(element: xmlElement) -> OrderedDict:
     return OrderedDict(columns)
 
 
+def insertIfNotExists(element):
+    """
+    inserta el contenido de la tabla sourceTable en la table destinationTable
+        sujeto a los datos de las tablas de aemet que quiero combinar
+    """
+    import os.path
+
+    path = pathFromXML(element, 'path')
+    db = element.find('db').text.strip()
+    db = os.path.join(path, db)
+    originTables = [element1.text.strip()
+                    for element1 in element.findall('table')]
+    destinationTable = element.find('tableNew').text.strip()
+    columns = tableDefinitionGet(element, destinationTable)
+    columnNames = ','.join(columns.keys())
+    writeScript = bool(element.find('writeScript').text.strip())
+
+    if writeScript:
+       f = open(os.path.join(path, FILE_INSERT_IF_NOT_EXISTS), 'w')
+
+    for table in originTables:
+        print(table)
+        con = sqlite3.connect(db)
+        cur = con.cursor()
+        cur.execute(f'select {columnNames} from {table}')
+        rows = [row for row in cur.fetchall()]
+        con.close()
+        stm1 = f'insert or ignore into {destinationTable} ({columnNames}) values '
+
+        con = sqlite3.connect(db)
+        cur = con.cursor()
+        for row in rows:
+            stm2 = stm1 + f'{tuple(row)}'
+            try:
+                cur.execute(stm2)
+            except:
+                logging.error(f'{stm2}')
+                continue
+            if writeScript:
+                f.write(stm2 + '\n')
+
+        con.commit()
+        con.close()
+
+    if writeScript:
+        print(f'Se ha escrito el fichero {f.name}')
+        f.close()
+
+
 def mergeTables():
     """
     Crea una unica tabla con todas las estaciones de aemet en idee
+    En idee.es aemet tiene clasificadas las estaciones en 4 shapefiles, de
+        modo que la misma estación puede estar en varios shapefiles. Se
+        pretende crear un fichero único sin estaciones repetidas
     """
 
     import xml.etree.ElementTree as ET
@@ -168,3 +224,5 @@ def mergeTables():
     element = root.find('weatherStationsInIdee')
 
     createTableIfNotExists(element)
+
+    insertIfNotExists(element)
